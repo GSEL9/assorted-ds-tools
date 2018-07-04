@@ -20,6 +20,7 @@ from setuptools import setup, find_packages
 PACKAGE_NAME = 'skxtend'
 VERSION = '0.1.0'
 KEYWORDS = 'machine learning, data analysis'
+TESTS_REQUIRE = ['pytest', 'mock']
 
 
 def readme():
@@ -55,7 +56,7 @@ setup(
     version=VERSION,
     packages=find_packages(exclude=['test']),
     setup_requires=['pytest-runner'],
-    tests_require=['pytest'],
+    tests_require=TESTS_REQUIRE,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Science/Research',
