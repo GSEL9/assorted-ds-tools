@@ -19,7 +19,8 @@ import pytest
 
 import numpy as np
 
-from .. import clustering
+from pytest_mock import mocker
+from skxtend import clustering
 
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split

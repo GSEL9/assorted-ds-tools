@@ -19,7 +19,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from .. import regression
+from skxtend import regression
 
 
 class TestTikhonovCV:
