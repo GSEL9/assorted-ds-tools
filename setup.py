@@ -20,7 +20,7 @@ from setuptools import setup, find_packages
 PACKAGE_NAME = 'skxtend'
 VERSION = '0.1.0'
 KEYWORDS = 'machine learning, data analysis'
-TESTS_REQUIRE = ['pytest', 'mock']
+TESTS_REQUIRE = ['pytest', 'mock', 'pytest_mock']
 
 
 def readme():
