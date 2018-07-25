@@ -25,6 +25,21 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 
+def train_test_scaling(X, y, test_size, random_state):
+    """Split original feature data into training and test splits including
+    standardization."""
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=random_state
+    )
+
+    scaler = Standardizer()
+    X_train_std = scaler.fit_transform(X_train)
+    X_test_std = scaler.transform(X_test)
+
+    return X_train_std, X_test_std, y_train, y_test
+
+
 class DiscardOutliers(BaseEstimator, TransformerMixin):
     """Remove outliers based on minimum and maximum criteria of log error
     value."""
@@ -52,48 +67,6 @@ class DiscardOutliers(BaseEstimator, TransformerMixin):
         """Execute outlier removing query."""
 
         return self._data.query(self._query)
-
-
-class TrainTestSplitter:
-    """Generate training and test splits from original feature data.
-    Optional to standardize training and test data."""
-
-    def __init__(self, test_size=0.3, scale=True, random_state=None):
-
-        self.test_size = test_size
-        self.scale = scale
-        self.random_state = random_state
-
-        # NOTE: Variables set with instance.
-        self.X = None
-        self.y = None
-        self.scaler = None
-
-    def fit(self, X, y):
-
-        self.X, self.y = check_X_y(X, y)
-        self.scaler = self.Standardizer()
-
-        return self
-
-    def transform(self):
-
-        # Split org data into training and test data.
-        X_train, X_test, y_train, y_test = train_test_split(
-            self.X, self.y, test_size=self.test_size,
-            random_state=self.random_state
-        )
-
-        # Standardize training and test data splits.
-        if self.scale:
-            self.scaler.fit(X_train)
-            X_train_std = self.scaler.transform(self.X_train)
-            X_test_std = self.scaler.transform(self.X_test)
-
-            return X_train_std, X_test_std, y_train, y_test
-
-        else:
-            return X_train, X_test, y_train, y_test
 
 
 class Standardizer:
