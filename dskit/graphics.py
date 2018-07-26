@@ -2,7 +2,7 @@
 #
 # graphics.py
 #
-# This module is part of skxtend.
+# This module is part of dskit.
 #
 
 """
@@ -11,7 +11,6 @@ Tools for data visualization and exploration.
 
 __author__ = 'Severin E. R. Langberg'
 __email__ = 'Langberg91@gmail.no'
-__status__ = 'Operational'
 
 
 import numpy as np
@@ -21,6 +20,8 @@ from matplotlib import cm
 
 from sklearn.metrics import silhouette_samples
 from sklearn.model_selection import learning_curve, validation_curve
+
+from dskit.utils import score_stats
 
 
 def plot_learning_curve(estimator, X, y, train_sizes, cv):
@@ -58,8 +59,8 @@ def _gen_plot_learning_curve(train_scores, test_scores, **kwargs):
     # Constructs a model learning curve from training and test scores. Graphs
     # the model performance as a function of the number training samples.
 
-    train_mean, train_std = _scores_stats(train_scores)
-    test_mean, test_std = _scores_stats(test_scores)
+    train_mean, train_std = scores_stats(train_scores)
+    test_mean, test_std = scores_stats(test_scores)
 
     plt.figure(figsize=(8, 6))
     plt.title('Learning curve')
@@ -93,8 +94,8 @@ def _gen_plot_validation_curve(train_scores, test_scores, **kwargs):
     # the model performance as a function of a specified hyperparameter.
 
     # NOTE: Collect score data from sklearn validation_curve()
-    train_mean, train_std = _scores_stats(train_scores)
-    test_mean, test_std = _scores_stats(test_scores)
+    train_mean, train_std = scores_stats(train_scores)
+    test_mean, test_std = scores_stats(test_scores)
 
     plt.figure(figsize=(8, 6))
     plt.title('Validation curve')
@@ -122,12 +123,6 @@ def _gen_plot_validation_curve(train_scores, test_scores, **kwargs):
     plt.ylim([0.5, 1.0])
 
     return plt
-
-
-def _scores_stats(scores):
-    # Computes mean and standard deviation of score values.
-
-    return np.mean(scores, axis=1), np.std(scores, axis=1)
 
 
 def silhouette_plot(X, ypred, **kwargs):
