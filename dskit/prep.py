@@ -2,7 +2,7 @@
 #
 # prep.py
 #
-# This module is part of skxtend.
+# This module is part of dskit.
 #
 
 """
@@ -27,12 +27,28 @@ from sklearn.preprocessing import StandardScaler
 
 def train_test_scaling(X, y, test_size, random_state):
     """Split original feature data into training and test splits including
-    standardization."""
+    standardization.
 
+    Args:
+        X (array-like): An (n x m) array of feature samples.
+        y (array-like): An (n x 1) array of target samples.
+        test_size (float): The fraction of data used in validation.
+        random_state (int): The random number generator intiator.
+
+    Returns:
+        (tuple): Standardized training and test sets of feature and target
+            data.
+
+    """
+
+    # NOTE: Should be function not class since dependent of random numer
+    # intiator and thus cannot be included in pipeline.
+
+    # Generate training and test sets.
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=test_size, random_state=random_state
     )
-
+    # Standardize feature data.
     scaler = Standardizer()
     X_train_std = scaler.fit_transform(X_train)
     X_test_std = scaler.transform(X_test)
