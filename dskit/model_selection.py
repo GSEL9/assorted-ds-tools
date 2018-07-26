@@ -6,20 +6,21 @@
 #
 
 """
-Tools for algorithm and hyperparameter selection.
+Tools for comparing algorithms and hyperparameter selection.
 """
 
 __author__ = 'Severin E. R. Langberg'
 __email__ = 'Langberg91@gmail.no'
 
 
-from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import cross_val_score
 
+from dskit.utils import score_stats
 from dskit.prep import train_test_scaling
 
 
-def compare_models(X, y, grid_specs, test_size=0.3, folds=10, scoring=None):
+def compare_estimators(X, y, param_grid, scoring, test_size=0.3, folds=10):
     """Compares estimators through a nested k-fold stratified cross-validation
     scheme across random states.
 
@@ -27,15 +28,16 @@ def compare_models(X, y, grid_specs, test_size=0.3, folds=10, scoring=None):
         X (array-like): An (n x m) array of feature samples.
         y (array-like): An (n x 1) array of target samples.
         grid_specs (tuple): A nested iterable of (`model`, `grid parameters`)
-            where `model` referes to the learning algorithm and
+            where `model` referes to the <> learning algorithm and
             `grid parameters` represents a <dict> of hyperparameter name and
             values in iterable as key-value pairs.
         test_size (float): The fraction of data used in validation.
-        folds (int):
+        folds (int): The number of folds to generate in cross validation.
         scoring (): The estimator evaluation scoring metric.
 
     Returns:
-        (dict): The training and test scores of each estimator.
+        (dict): The training and test scores of each estimator averaged across
+            each random state.
 
     """
 
@@ -44,47 +46,56 @@ def compare_models(X, y, grid_specs, test_size=0.3, folds=10, scoring=None):
 
     results = {}
     for model_name, (model, params) in grid.items():
-
         # Address model stochasticity by eval across multiple random states.
         results[model_name] = {'train_scores': [], 'test_scores': []}
         for random_state in range(10):
-
             # Collect training and test scores from nested cross-validation.
-            grid, train_score, test_score = _eval_estimator(
+            train_score, test_score = nested_cross_val(
                 X, y, model, params, random_state, test_size, folds, scoring
             )
             train_scores.extend(np.mean(train_score))
             test_scores.extend(np.mean(test_score))
-
         results[model_name]['train_scores'] = train_scores
         results[model_name]['test_scores'] = test_scores
-
         # Print model training and test performance.
         model_performance_report(model_name, train_scores, test_scores)
 
     return results
 
 
-def _eval_estimator(*args):
-    # Perform nested cross-validation of estimator performance.
-    # Args: X, y, model, params, random_state, test_size, folds, scoring
-    # Returns: grid, training and test scores
+def nested_cross_val(*args):
+    """Perform nested cross validation of estimator performance.
+
+    Args:
+        X (array-like): An (n x m) array of feature samples.
+        y (array-like): An (n x 1) array of target samples.
+        estimator (class): The learning algorithm.
+        params (dict): The hyperparameter grid with parameter name and iterable
+            parameter values as key-value pairs.
+        random_state (int): The random number generator intiator.
+        test_size (float): The fraction of data used in validation.
+        folds (int): The number of folds to generate in cross validation.
+        scoring ():
+
+    Returns:
+        (tuple): Cross validated training and test scores.
+
+    """
 
     # Construct training and test splits including scaling of feature data.
     X_train_std, X_test_std, y_train, y_test = train_test_scaling(
         args[0], args[1], args[3], args[2]
     )
     # Perform cross-validated hyperparameter search.
-    grid = GridSearchCV(
-        estimator=args[4], param_grid=args[5], scoring=args[7],
-        cv=args[6]
+    cv_grid = GridSearchCV(
+        estimator=args[4], param_grid=args[5], scoring=args[7], cv=args[6]
     )
-    grid.fit(X_train_std, y_train)
+    cv_grid.fit(X_train_std, y_train)
     # Array of scores of the estimator for each run of the cross validation.
-    train_score = cross_val_score(grid, X_train_std, y_train)
-    test_score = cross_val_score(grid, X_test_std, y_test)
+    cv_train_score = cross_val_score(cv_grid, X_train_std, y_train)
+    cv_test_score = cross_val_score(cv_grid, X_test_std, y_test)
 
-    return grid, train_score, test_score
+    return cv_train_score, cv_test_score
 
 
 def model_performance_report(name, train_scores, test_scores):
@@ -104,7 +115,12 @@ def model_performance_report(name, train_scores, test_scores):
 
 
 def report_best_model(results):
-    """Determines the model corresponding to the maximum average test score."""
+    """Reports the model corresponding to the maximum average test score.
+
+    Args:
+        results (dict):
+
+    """
 
     max_score, best_model = 0, None
     for model, (_, test_scores) in results.items():
@@ -118,6 +134,8 @@ def report_best_model(results):
     #    results.items(), key=(lambda name_avgscore: name_avgscore[1])
     #)
     print('Best model: `{}`\nAverage score: {}'.format(best_model, best_score))
+
+    return None
 
 
 def parameter_grid(grid_specs):
@@ -146,6 +164,8 @@ def parameter_grid(grid_specs):
 
             param_name = ('__').join((model_name, key))
             models_and_parameters[model_name][1][param_name] = value
+
+    return models_and_parameters
 
 
 if __name__ == '__main__':
