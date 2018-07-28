@@ -2,7 +2,7 @@
 #
 # regression.py
 #
-# This module is part of skxtend.
+# This module is part of dstools.
 #
 
 """

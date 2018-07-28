@@ -2,7 +2,7 @@
 #
 # model_selection.py
 #
-# This module is part of dskit.
+# This module is part of dstools.
 #
 
 """
