@@ -160,7 +160,7 @@ def report_best_model(results, criteria='variance'):
                 continue
 
     print('Best model report', '\n{}'.format('-' * 20))
-    print('Name: {}\nCriteria: {}\nBest scores: {}'.format(best_model,
+    print('Name: {}\nCriteria: {}\nBest score: {}'.format(best_model,
                                                            criteria,
                                                            best_score))
 
