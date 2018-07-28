@@ -13,6 +13,7 @@ __author__ = 'Severin E. R. Langberg'
 __email__ = 'Langberg91@gmail.no'
 
 
+from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_val_score
 
@@ -117,26 +118,49 @@ def model_performance_report(name, train_scores, test_scores):
     )
 
 
-def report_best_model(results):
-    """Reports the model corresponding to the maximum average test score.
+def report_best_model(results, criteria='variance'):
+    """Determines the optimal model by evaluating the model performance results
+    according to a specified criteria.
 
     Args:
-        results (dict):
+        results ():
+        criteria (str, {bias, variance}): Decision rule for model performance comparison.
+            Is `variance` criteria: Selects the model corresponding to the minimum difference
+            between the training and test scores. If `bias` criteria: Selects the model
+            corresponding to the maximum test score.
 
     """
 
-    max_score, best_model = 0, None
-    for model, (_, test_scores) in results.items():
+    if criteria == 'bias':
+        init_score = -np.float('inf')
+    elif criteria == 'variance':
+        init_score = np.float('inf')
+    else:
+        raise ValueError('Invalid evaluation criteria: `{}`'.format(criteria))
 
-        score = np.mean(test_scores)
-        if score > max_score:
-            max_score = score
-            best_model = model
+    best_model, best_score = None, init_score
+    for model_name, scores in results.items():
 
-    #opt_model, avg_score = max(
-    #    results.items(), key=(lambda name_avgscore: name_avgscore[1])
-    #)
-    print('Best model: `{}`\nAverage score: {}'.format(best_model, best_score))
+        keys, (train, test) = list(scores.keys()), list(scores.values())
+
+        if criteria == 'bias':
+            score = np.max(test)
+            if score > best_score:
+                best_model, best_score = model_name, score
+            else:
+                continue
+
+        elif criteria == 'variance':
+            score = np.sum(np.squeeze(train) - np.squeeze(test))
+            if score < best_score:
+                best_model, best_score = model_name, score
+            else:
+                continue
+
+    print('Best model report', '\n{}'.format('-' * 20))
+    print('Name: {}\nCriteria: {}\nBest scores: {}'.format(best_model,
+                                                           criteria,
+                                                           best_score))
 
     return None
 
