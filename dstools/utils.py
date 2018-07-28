@@ -22,7 +22,7 @@ def score_stats(scores):
     return np.mean(scores, axis=1), np.std(scores, axis=1)
 
 
-class BaseEstimator:
+class BaseLearner:
     """An estimator wrapper."""
 
     # NOTE: Used in stacking.
