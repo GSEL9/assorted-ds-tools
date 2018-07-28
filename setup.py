@@ -2,22 +2,21 @@
 #
 # setup.py
 #
-# This module is part of skxtend.
+# This module is part of dskit.
 #
 
 """
-Setup script for skxtend.
+Setup script for dskit package.
 """
 
 __author__ = 'Severin E. R. Langberg'
 __email__ = 'Langberg91@gmail.no'
-__status__ = 'Operational'
 
 
 from setuptools import setup, find_packages
 
 
-PACKAGE_NAME = 'skxtend'
+PACKAGE_NAME = 'dskit'
 VERSION = '0.1.0'
 KEYWORDS = 'machine learning, data analysis'
 TESTS_REQUIRE = ['pytest', 'mock', 'pytest_mock']
@@ -47,7 +46,7 @@ def license():
 setup(
     author="Severin Langberg",
     author_email="Langberg91@gmail.com",
-    description="Tools for preforming data analysis and predictive modelling.",
+    description="A set of tools for preforming data analysis and predictive modelling.",
     url='https://github.com/GSEL9/ds-tools',
     install_requires=requirements(),
     long_description=readme(),
