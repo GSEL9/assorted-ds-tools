@@ -165,7 +165,7 @@ def report_best_model(results, criteria='variance'):
     return None
 
 
-def parameter_grid(grid_specs):
+def parameter_grid(grid_specs, pipeline=False):
     """Transforms a set of grid search specifications into a pipeline compatible
     parameter grid.
 
