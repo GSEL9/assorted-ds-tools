@@ -6,7 +6,7 @@
 #
 
 """
-Tools for comparing algorithms and hyperparameter selection.
+Tools for comparing algorithms and hyperparameter optimization.
 """
 
 __author__ = 'Severin E. R. Langberg'
@@ -84,11 +84,11 @@ def nested_cross_val(*args):
 
     # Construct training and test splits including scaling of feature data.
     X_train_std, X_test_std, y_train, y_test = train_test_scaling(
-        args[0], args[1], args[3], args[2]
+        args[0], args[1], test_size=args[2], random_state=args[3]
     )
     # Perform cross-validated hyperparameter search.
     cv_grid = GridSearchCV(
-        estimator=args[4], param_grid=args[5], scoring=args[7], cv=args[6]
+        estimator=args[4], param_grid=args[5], scoring=args[6], cv=args[7]
     )
     cv_grid.fit(X_train_std, y_train)
     # Array of scores of the estimator for each run of the cross validation.
