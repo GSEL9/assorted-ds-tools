@@ -11,7 +11,7 @@ Testing of skxtend graphics tools.
 
 __author__ = 'Severin E. R. Langberg'
 __email__ = 'Langberg91@gmail.no'
-__status__ = 'Operational'
+__status__ = 'Passed 07.28.2018'
 
 
 import pytest
@@ -21,8 +21,8 @@ import numpy as np
 from sklearn.datasets import make_blobs
 from sklearn.metrics import silhouette_samples
 
-from .. import clustering
-from .. import graphics
+from dstools import clustering
+from dstools import graphics
 
 
 class TestGraphics:

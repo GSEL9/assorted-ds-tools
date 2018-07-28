@@ -11,7 +11,7 @@ Testing of skxtend regression algorithms.
 
 __author__ = 'Severin E. R. Langberg'
 __email__ = 'Langberg91@gmail.no'
-__status__ = 'Operational'
+__status__ = 'Passed 07.28.2018'
 
 
 import pytest
@@ -19,7 +19,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from skxtend import regression
+from dstools import regression
 
 
 class TestTikhonovCV:

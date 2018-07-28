@@ -11,16 +11,14 @@ Testing of skxtend clustering algorithms.
 
 __author__ = 'Severin E. R. Langberg'
 __email__ = 'Langberg91@gmail.no'
-__status__ = 'Operational'
+__status__ = 'Passed 07.28.2018'
 
 
-import mock
 import pytest
 
 import numpy as np
 
-from pytest_mock import mocker
-from skxtend import clustering
+from dstools import clustering
 
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
