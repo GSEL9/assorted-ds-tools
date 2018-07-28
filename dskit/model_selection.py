@@ -101,15 +101,16 @@ def nested_cross_val(*args):
 def model_performance_report(name, train_scores, test_scores):
     """Prints a model performance report including training and test scores,
     and the difference between the training and test scores."""
-
-    print('Model: {}\nTrain scores: {} +/- {}\nTest scores: {} +/- {}'
+    
+    print('Model performance report', '\n{}'.format('-' * 25))
+    print('Name: {}\nTraining scores: {} +/- {}\nTest scores: {} +/- {}'
           ''.format(name,
                     np.round(np.mean(train_scores), decimals=3),
                     np.round(np.std(train_scores), decimals=3),
                     np.round(np.mean(test_scores), decimals=3),
                     np.round(np.std(test_scores), decimals=3)))
 
-    print('Train-test deviation: {}\n'
+    print('Train-test difference: {}\n'
           ''.format(np.mean(train_scores) - np.mean(test_scores))
     )
 
