@@ -25,6 +25,35 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 
+class Standardizer:
+    """Standardize feature data by subtracting mean and dividing by feature
+    standard deviation."""
+
+    # NOTE: Fit standard scaler to training data to learn training data
+    # parameters. Transform both training data and test data with training
+    # data parameters. Thus, standardized training and test data are comparable.
+
+    def __init__(self, scaler=StandardScaler, **kwargs):
+
+        self._scaler = scaler(**kwargs)
+
+    def fit(self, X, y=None, **kwargs):
+
+        self._scaler.fit(X)
+
+        return self
+
+    def transform(self, X):
+
+        return self._scaler.transform(X)
+
+    def fit_transform(self, X, y=None, **kwargs):
+
+        self.fit(X, y=y, **kwargs)
+
+        return self.transform(X)
+
+
 def train_test_scaling(X, y, test_size, random_state):
     """Split original feature data into training and test splits including
     standardization.
@@ -56,35 +85,34 @@ def train_test_scaling(X, y, test_size, random_state):
     return X_train_std, X_test_std, y_train, y_test
 
 
-class Standardizer:
-    """Standardize feature data by subtracting mean and dividing by feature
-    standard deviation."""
+class Clone(BaseEstimator, TransformerMixin):
+    """Clone a dataset."""
 
-    # NOTE: Fit standard scaler to training data to learn training data
-    # parameters. Transform both training data and test data with training
-    # data parameters. Thus, standardized training and test data are comparable.
+    def __init__(self):
 
-    def __init__(self, scaler=StandardScaler, **kwargs):
+        self._data = None
 
-        self._scaler = scaler(**kwargs)
+    def fit(self, X, y=None):
 
-    def fit(self, X, y=None, **kwargs):
-
-        self._scaler.fit(X)
+        # TODO: Type checking.
+        self._data = np.empty(np.shape(X))
 
         return self
 
-    def transform(self, X):
+    def transform(self, X=None):
 
-        return self._scaler.transform(X)
+        self._data[:] = X
 
-    def fit_transform(self, X, y=None, **kwargs):
+        return self._data
 
-        self.fit(X, y=y, **kwargs)
+    def fit_transform(self, X):
+
+        self.fit(X)
 
         return self.transform(X)
 
 
+# ERROR: Cannot query with pandas dataframe
 class DiscardOutliers(BaseEstimator, TransformerMixin):
     """Remove outliers based on minimum and maximum criteria of log error
     value.
@@ -114,86 +142,14 @@ class DiscardOutliers(BaseEstimator, TransformerMixin):
         )
         return self
 
-    # ERROR: Cannot query with pandas dataframe
+    # ERROR:
     def transform(self, X):
         """Remove outliers from data."""
 
         return X.query(self.query)
 
 
-class LabelEncodeObjects(BaseEstimator, TransformerMixin):
-    """Transform features of data type object by label encoding."""
-
-    def __init__(self, object_dtype='object'):
-
-        self.object_dtype = object_dtype
-
-        self._data = None
-        self._object_columns = None
-
-    def fit(self, X, y=None):
-        """Determine which features are not numerical."""
-
-        self._data = check_array(X)
-        # Check which features (non-numerical) that must be encoded.
-        self._object_columns = []
-        for feature in self.data.columns:
-            if self._data[feature].dtype == self.object_dtype:
-                self._object_columns.append(feature)
-
-        return self
-
-    def transform(self):
-        """Transform features of data type object by label encoding.
-
-        Returns:
-            (numpy.ndarray): The label encoded dataset.
-
-        """
-
-        for feature in self._object_feature:
-            encoder = LabelEncoder()
-            feature_data = list(self._data[feature].values)
-            self._data[feature] = encoder.fit_transform(feature_data)
-
-        return np.ndarray(self._data, dtype=float)
-
-
-class LabelEncodeFeatures(BaseEstimator, TransformerMixin):
-    """Transform specified features by label encoding."""
-
-    def __init__(self, features=None):
-
-        self.features = features
-
-        self._data = None
-
-    def fit(self, X, y=None):
-
-        self._data = check_array(X)
-
-        if self.features is None:
-            self.features = self._data.columns
-
-        return self
-
-    def transform(self):
-        """Transform specified features by label encoding.
-
-        Returns:
-            (numpy.ndarray): The label encoded dataset.
-
-        """
-
-        for feature in self.features:
-
-            encoder = LabelEncoder()
-            feature_data = list(self._data[feature].values)
-            self._data[feature] = encoder.fit_transform(feature_data)
-
-        return np.array(self._data, dtype=float)
-
-
+# WIP:
 class ReplaceNans(BaseEstimator, TransformerMixin):
     """Replace NaN values by specified fill value or method."""
 
@@ -236,6 +192,7 @@ class ReplaceNans(BaseEstimator, TransformerMixin):
         return self._data
 
 
+# WIP:
 class DropFeatures(BaseEstimator, TransformerMixin):
     """Remove features from dataset."""
 
@@ -256,22 +213,57 @@ class DropFeatures(BaseEstimator, TransformerMixin):
         return self._data.drop(self.features, axis=1)
 
 
-class Clone(BaseEstimator, TransformerMixin):
-    """Clone a dataset."""
+# WIP:
+class FeatureEncoder(BaseEstimator, TransformerMixin):
+    """Transform the feature data of a target data type according to a
+    specified encoding procedure.
 
-    def __init__(self):
+    Attributes:
+        targets (list of str): The feature labels of target data type.
+        encoder (object): An encoder with a `fit_transform()` method.
 
-        self._data = None
+    """
+
+    def __init__(self, target_dtype='object', encoder=LabelEncoder):
+
+        self.target_dtype = target_dtype
+        self.encoder = encoder()
+
+        # NOTE: Variable set with instance.
+        self.targets = None
 
     def fit(self, X, y=None):
+        """Determine which features are not numerical."""
 
-        self._data = check_array(X)
+        # Check which features (non-numerical) that must be encoded.
+        self.targets = []
+        for feature in X.columns:
+            if X[feature].dtype == self.target_dtype:
+                self.targets.append(feature)
 
         return self
 
-    def transform(self):
+    def transform(self, X, copy=True):
+        """Transform features of target data type with specified encoder
+        procedure.
 
-        return self._data.copy()
+        Returns:
+            (): The label encoded dataset.
+
+        """
+
+        if copy:
+            # TODO: Type checking
+            data = X.copy()
+        else:
+            # TODO: Type checking
+            data = X
+
+        for feature in self.targets:
+            feature_data = list(data[feature].values)
+            data[feature] = self.encoder.fit_transform(feature_data)
+
+        return data
 
 
 if __name__ == '__main__':
@@ -292,10 +284,27 @@ if __name__ == '__main__':
 
         return X, y
 
-    X, y = data()
+    data, _ = data()
 
 
-    selector = DiscardOutliers()
-    selector.fit(X)
-    X_clean = selector.transform(X)
-    print(X_clean)
+    class MockEncoder:
+        """Mocking a feature encoder object."""
+
+        def __init__(self):
+
+            self.old_keys = None
+            self.new_keys = None
+
+        def fit(self, X, y=None, **kwargs):
+
+            pass
+
+        def transform(self, X):
+
+            pass
+
+        def fit_transform(self, X, y=None, **kwargs):
+
+            self.fit(X, y=y, **kwargs)
+
+            return self.transform(X)
