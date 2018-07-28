@@ -216,3 +216,47 @@ class TestDiscardOutliers:
         #discarder.fit(data)
         #discarder.transform(data)
         pass
+
+
+class TestClone:
+
+    SEED = 123
+
+    @pytest.fixture
+    def data(self):
+
+        np.random.seed(self.SEED)
+
+        num_samples, num_features = 100, 10
+        X = np.random.random((num_samples, num_features))
+
+        return X
+
+    @pytest.fixture
+    def cloner(self):
+
+        return prep.Clone()
+
+    def test_init(self, cloner):
+
+        assert isinstance(cloner, prep.Clone)
+
+    def test_fit(self, data, cloner):
+
+        cloner.fit(data)
+
+    def test_transform(self, data, cloner):
+
+        cloner.fit(data)
+        cloner.transform(data)
+
+    def test_fit_transform(self, data, cloner):
+
+        cloner.fit_transform(data)
+
+    def test_copying(self, data, cloner):
+
+        copy = cloner.fit_transform(data)
+
+        assert np.array_equal(data, copy)
+        assert copy is not data
