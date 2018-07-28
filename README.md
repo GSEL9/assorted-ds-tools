@@ -1,9 +1,9 @@
-# Data Science Kit
+# Data Science Tools
 
 A collection of tools for conducting data analysis, predictive modeling and
 data visualization.
 
-## dskit
+## dstools
 
 Various clustering and regression algorithms, visualization and data
 pre-processing tools.
@@ -15,6 +15,11 @@ pre-processing tools.
 ### Regression
 
 * Tikhonov regularized regression:
+
+
+### Model selection:
+* Compare estimators: Perform model selection through nested cross-validation,
+  and determine the optimal model based on performance criteria.
 
 
 ### Pre-processing
