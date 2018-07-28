@@ -151,7 +151,7 @@ def report_best_model(results, criteria='variance'):
                 continue
 
         elif criteria == 'variance':
-            score = np.sum(np.squeeze(train) - np.squeeze(test))
+            score = np.min(np.squeeze(train) - np.squeeze(test))
             if score < best_score:
                 best_model, best_score = model_name, score
             else:
