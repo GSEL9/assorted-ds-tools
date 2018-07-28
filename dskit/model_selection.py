@@ -41,22 +41,24 @@ def compare_estimators(X, y, param_grid, scoring, test_size=0.3, folds=10):
 
     """
 
-    # Format container of models and hyperparameter specifications.
-    grid = parameter_grid(grid_specs)
-
     results = {}
-    for model_name, (model, params) in grid.items():
-        # Address model stochasticity by eval across multiple random states.
+    for model_name, (model, param_grid) in models_and_params.items():
+
         results[model_name] = {'train_scores': [], 'test_scores': []}
-        for random_state in range(10):
+        # Address model stochasticity by eval across multiple random states.
+        for random_state in range(2):
+
+            if isinstance(model, Pipeline):
+                estimator = model
+            else:
+                estimator = model(random_state=random_state)
             # Collect training and test scores from nested cross-validation.
-            train_score, test_score = nested_cross_val(
-                X, y, model, params, random_state, test_size, folds, scoring
+            train_scores, test_scores = nested_cross_val(
+                X, y, test_size, random_state, estimator, param_grid, scoring, folds
             )
-            train_scores.extend(np.mean(train_score))
-            test_scores.extend(np.mean(test_score))
-        results[model_name]['train_scores'] = train_scores
-        results[model_name]['test_scores'] = test_scores
+            results[model_name]['train_scores'].append(np.mean(train_scores))
+            results[model_name]['test_scores'].append(np.mean(test_scores))
+
         # Print model training and test performance.
         model_performance_report(model_name, train_scores, test_scores)
 
@@ -154,7 +156,7 @@ def parameter_grid(grid_specs):
             algorithms and correpsonding hyperparameters.
 
     """
-    
+
     models_and_parameters = {}
     for model, params in grid_specs:
 
