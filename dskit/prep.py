@@ -93,22 +93,26 @@ class Standardizer:
     # parameters. Transform both training data and test data with training
     # data parameters. Thus, standardized training and test data are comparable.
 
-    def __init__(self, scaler=StandardScaler):
+    def __init__(self, scaler=StandardScaler, **kwargs):
 
-        self._scaler = scaler
+        self._scaler = scaler(**kwargs)
 
     def fit(self, X, y=None, **kwargs):
 
-        self._scaler(**kwargs)
+        #self._scaler()
         self._scaler.fit(X)
 
         return self
 
     def transform(self, X):
 
-        X_trans = self._scaler.transform(X)
+        return self._scaler.transform(X)
 
-        return X_trans
+    def fit_transform(self, X, y=None, **kwargs):
+
+        self.fit(X, y=y, **kwargs)
+
+        return self.transform(X)
 
 
 class LabelEncodeObjects(BaseEstimator, TransformerMixin):
