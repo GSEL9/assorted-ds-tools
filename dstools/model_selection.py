@@ -13,6 +13,8 @@ __author__ = 'Severin E. R. Langberg'
 __email__ = 'Langberg91@gmail.no'
 
 
+import numpy as np
+
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_val_score
