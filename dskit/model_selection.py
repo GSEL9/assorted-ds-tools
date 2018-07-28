@@ -101,7 +101,7 @@ def nested_cross_val(*args):
 def model_performance_report(name, train_scores, test_scores):
     """Prints a model performance report including training and test scores,
     and the difference between the training and test scores."""
-    
+
     print('Model performance report', '\n{}'.format('-' * 25))
     print('Name: {}\nTraining scores: {} +/- {}\nTest scores: {} +/- {}'
           ''.format(name,
@@ -154,16 +154,23 @@ def parameter_grid(grid_specs):
             algorithms and correpsonding hyperparameters.
 
     """
-
+    
     models_and_parameters = {}
     for model, params in grid_specs:
 
-        model_name = str(model.__name__).lower()
-        models_and_parameters[model_name] = (model, {})
+        if pipeline:
+            model_name = str(model.steps[-1][0])
+        else:
+            model_name = str(model.__name__).lower()
 
+        models_and_parameters[model_name] = (model, {})
         for key, value in params.items():
 
-            param_name = ('__').join((model_name, key))
+            if pipeline:
+                param_name = ('__').join((model_name, str(key)))
+            else:
+                param_name = str(key)
+
             models_and_parameters[model_name][1][param_name] = value
 
     return models_and_parameters
