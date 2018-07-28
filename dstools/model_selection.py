@@ -21,17 +21,17 @@ from dstools.utils import score_stats
 from dstools.prep import train_test_scaling
 
 
-def compare_estimators(X, y, param_grid, scoring, test_size=0.3, folds=10):
+def compare_estimators(X, y, models_and_params, scoring, test_size=0.3, folds=10):
     """Compares estimators through a nested k-fold stratified cross-validation
     scheme across random states.
 
     Args:
         X (array-like): An (n x m) array of feature samples.
         y (array-like): An (n x 1) array of target samples.
-        grid_specs (tuple): A nested iterable of (`model`, `grid parameters`)
-            where `model` referes to the <> learning algorithm and
-            `grid parameters` represents a <dict> of hyperparameter name and
-            values in iterable as key-value pairs.
+        models_and_params (tuple): A nested iterable of
+            (`model`, `grid parameters`) where `model` referes to the <>
+            learning algorithm and `grid parameters` represents a <dict> of
+            hyperparameter name and values in iterable as key-value pairs.
         test_size (float): The fraction of data used in validation.
         folds (int): The number of folds to generate in cross validation.
         scoring (): The estimator evaluation scoring metric.
