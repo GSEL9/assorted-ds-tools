@@ -2,7 +2,7 @@
 #
 # prep.py
 #
-# This module is part of dskit.
+# This module is part of dstools.
 #
 
 """
@@ -56,37 +56,8 @@ def train_test_scaling(X, y, test_size, random_state):
     return X_train_std, X_test_std, y_train, y_test
 
 
-class DiscardOutliers(BaseEstimator, TransformerMixin):
-    """Remove outliers based on minimum and maximum criteria of log error
-    value."""
-
-    def __init__(self, field='logerror', min_val=-0.4, max_val=0.4):
-
-        self.field = field
-        self.min_val = min_val
-        self.max_val = max_val
-
-        self._query = None
-        self._data = None
-
-    def fit(self, X, y=None):
-        """Construct query to remove outliers."""
-
-        self._data = check_array(X)
-
-        self._query = '{field} > {min_val} and {field} < {max_val}'.format(
-            field=self.field, min_val=self.min_val, max_val=self.max_val
-        )
-        return self
-
-    def transform(self):
-        """Execute outlier removing query."""
-
-        return self._data.query(self._query)
-
-
 class Standardizer:
-    """Standardize feature data by subtracting mean and dividing by
+    """Standardize feature data by subtracting mean and dividing by feature
     standard deviation."""
 
     # NOTE: Fit standard scaler to training data to learn training data
@@ -99,7 +70,6 @@ class Standardizer:
 
     def fit(self, X, y=None, **kwargs):
 
-        #self._scaler()
         self._scaler.fit(X)
 
         return self
@@ -113,6 +83,42 @@ class Standardizer:
         self.fit(X, y=y, **kwargs)
 
         return self.transform(X)
+
+
+class DiscardOutliers(BaseEstimator, TransformerMixin):
+    """Remove outliers based on minimum and maximum criteria of log error
+    value.
+
+    Attributes:
+        query (str):
+        min_val (float): The minimum field value.
+        max_val (float): The maximum field value.
+
+    """
+
+    def __init__(self, field='logerror', min_val=-0.4, max_val=0.4):
+
+        self.field = field
+        self.min_val = min_val
+        self.max_val = max_val
+
+        self.query = None
+
+    def fit(self, X, y=None):
+        """Define query that determines outliers."""
+
+        self.query = '{field} > {min_val} and {field} < {max_val}'.format(
+            field=self.field,
+            min_val=self.min_val,
+            max_val=self.max_val
+        )
+        return self
+
+    # ERROR: Cannot query with pandas dataframe
+    def transform(self, X):
+        """Remove outliers from data."""
+
+        return X.query(self.query)
 
 
 class LabelEncodeObjects(BaseEstimator, TransformerMixin):
@@ -266,3 +272,30 @@ class Clone(BaseEstimator, TransformerMixin):
     def transform(self):
 
         return self._data.copy()
+
+
+if __name__ == '__main__':
+
+    from pytest import approx
+
+    #np.random.seed(123)
+    #num_samples, num_features = 100, 10
+    #data = np.random.random((num_samples, num_features))
+
+    def data(seed=123):
+
+        np.random.seed(seed)
+
+        num_samples, num_features = 100, 10
+        X = np.random.random((num_samples, num_features))
+        y = np.random.random((num_samples, 1))
+
+        return X, y
+
+    X, y = data()
+
+
+    selector = DiscardOutliers()
+    selector.fit(X)
+    X_clean = selector.transform(X)
+    print(X_clean)
