@@ -25,6 +25,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 
+# QUESTION: Rename (e.g. scaler)?
 class Standardizer:
     """Standardize feature data by subtracting mean and dividing by feature
     standard deviation."""
@@ -54,6 +55,8 @@ class Standardizer:
         return self.transform(X)
 
 
+# QUESTION: Rename (e.g. train_test_scale/split_and_scale/split_and_standardize
+# /split_center_scale)?
 def train_test_scaling(X, y, test_size, random_state):
     """Split original feature data into training and test splits including
     standardization.
@@ -112,7 +115,7 @@ class Clone(BaseEstimator, TransformerMixin):
         return self.transform(X)
 
 
-# ERROR: Cannot query with pandas dataframe
+# ERROR: Cannot query with numpy array. Must convert data to correct dtype.
 class DiscardOutliers(BaseEstimator, TransformerMixin):
     """Remove outliers based on minimum and maximum criteria of log error
     value.
@@ -235,7 +238,7 @@ class FeatureEncoder(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         """Determine which features are not numerical."""
 
-        # Check which features (non-numerical) that must be encoded.
+        # Determine which features that will be encoded.
         self.targets = []
         for feature in X.columns:
             if X[feature].dtype == self.target_dtype:
@@ -259,6 +262,7 @@ class FeatureEncoder(BaseEstimator, TransformerMixin):
             # TODO: Type checking
             data = X
 
+        # Encode selected features according to specified procedure.
         for feature in self.targets:
             feature_data = list(data[feature].values)
             data[feature] = self.encoder.fit_transform(feature_data)
@@ -268,11 +272,13 @@ class FeatureEncoder(BaseEstimator, TransformerMixin):
 
 if __name__ == '__main__':
 
-    from pytest import approx
+    """
+    DOTO:
+        * Check how LabelEncoder actually works.
+        * Mimick LabelEncoder in mock and complete tests.
+    """
 
-    #np.random.seed(123)
-    #num_samples, num_features = 100, 10
-    #data = np.random.random((num_samples, num_features))
+    from pytest import approx
 
     def data(seed=123):
 
