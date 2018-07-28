@@ -16,7 +16,7 @@ __email__ = 'Langberg91@gmail.no'
 from setuptools import setup, find_packages
 
 
-PACKAGE_NAME = 'dskit'
+PACKAGE_NAME = 'dstools'
 VERSION = '0.1.0'
 KEYWORDS = 'machine learning, data analysis'
 TESTS_REQUIRE = ['pytest', 'mock', 'pytest_mock']

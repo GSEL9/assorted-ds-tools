@@ -17,8 +17,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_val_score
 
-from dskit.utils import score_stats
-from dskit.prep import train_test_scaling
+from dstools.utils import score_stats
+from dstools.prep import train_test_scaling
 
 
 def compare_estimators(X, y, param_grid, scoring, test_size=0.3, folds=10):

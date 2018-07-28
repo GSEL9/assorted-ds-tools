@@ -21,7 +21,7 @@ from matplotlib import cm
 from sklearn.metrics import silhouette_samples
 from sklearn.model_selection import learning_curve, validation_curve
 
-from dskit.utils import score_stats
+from dstools.utils import score_stats
 
 
 def plot_learning_curve(estimator, X, y, train_sizes, cv):
