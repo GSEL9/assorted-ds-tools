@@ -70,16 +70,18 @@ class MockEncoder:
 
     def __init__(self):
 
-        self.old_keys = None
-        self.new_keys = None
+        # NOTE: Variable set with instance.
+        self.targets = None
 
     def fit(self, X, y=None, **kwargs):
 
-        pass
+        self.targets = list(X.columns)
+
+        return self
 
     def transform(self, X):
 
-        pass
+        return X
 
     def fit_transform(self, X, y=None, **kwargs):
 
