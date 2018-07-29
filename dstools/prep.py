@@ -273,53 +273,40 @@ class FeatureEncoder(BaseEstimator, TransformerMixin):
         return self.transform(X, y=y, **kwargs)
 
 
-# WIP:
 class DropFeatures(BaseEstimator, TransformerMixin):
-    """Remove features from dataset."""
+    """Remove features from dataset.
 
-    def __init__(self, features=[]):
+    Attributes:
+        targets (list):
+
+    """
+
+    def __init__(self, features):
 
         self.features = features
 
-        self._data = None
+        # NOTE: Variable set with instance.
+        self.targets = None
 
-    def fit(self, X, y=None):
+    def fit(self, X, y=None, **kwargs):
 
-        self._data = check_array(X)
+        self.targets = []
+        for feature in X.columns:
+            if feature in self.features:
+                self.targets.append(feature)
 
         return self
 
-    def transform(self):
+    def transform(self, X, y=None, **kwargs):
 
-        return self._data.drop(self.features, axis=1)
+        data = X.copy()
+        for feature in self.targets:
+            data.drop(labels=feature, axis=1, inplace=True)
 
+        return data
 
-if __name__ == '__main__':
+    def fit_transform(self, X, y=None, **kwargs):
 
-    import pandas as pd
-    from pytest import approx
+        self.fit(X, y=y, **kwargs)
 
-    def data(seed=123):
-
-        np.random.seed(seed)
-
-        num_samples, num_features = 100, 10
-        X = np.random.random((num_samples, num_features))
-        y = np.random.random((num_samples, 1))
-
-        return X, y
-
-    data = pd.DataFrame(
-        {
-            'patient': [1, 1, 1, 2, 2],
-            'treatment': [0, 1, 0, 1, 0],
-            'score': ['strong', 'weak', 'normal', 'weak', 'strong']
-        },
-        columns=['patient', 'treatment', 'score']
-    )
-
-    # Encoding nominal data
-
-    encoder = FeatureEncoder()
-    encoder.fit(data)
-    #data_enc = encoder.transform(data)
+        return self.transform(X, y=y, **kwargs)
