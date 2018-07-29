@@ -17,11 +17,11 @@ __email__ = 'Langberg91@gmail.no'
 import numpy as np
 
 from scipy import sparse
-from dstools.base import StackingBase
+from dstools.base import StackBase
 from sklearn.utils.validation import check_X_y, check_array
 
 
-class ClassifierStack(StackingBase):
+class ClassifierStack(StackBase):
     """An ensemble learning technique to combine multiple classification models
     via a meta-classifier."""
 
@@ -94,7 +94,7 @@ class ClassifierStack(StackingBase):
             )
 
 
-class RegressionStack(StackingBase):
+class RegressionStack(StackBase):
 
     def __init__(self, learners, random_state=None):
 

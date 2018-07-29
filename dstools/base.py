@@ -20,7 +20,7 @@ from sklearn.utils.validation import check_is_fitted
 from sklearn.base import ClassifierMixin, TransformerMixin
 
 
-class StackingBase(BaseEstimator, ClassifierMixin, TransformerMixin):
+class StackBase(BaseEstimator, ClassifierMixin, TransformerMixin):
     """The stacking meta estimator base."""
 
     def __init__(self, learners, random_state=None):
