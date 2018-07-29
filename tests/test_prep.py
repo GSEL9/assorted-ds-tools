@@ -330,8 +330,6 @@ class TestRemoveOutliers:
 
 class TestFeatureEncoder:
 
-    SEED = 123
-
     @pytest.fixture
     def data(self):
 
@@ -390,5 +388,56 @@ class TestFeatureEncoder:
         _encoder = encoder()
         _encoder.fit(data)
         trans = _encoder.transform(data)
+
+        assert_frame_equal(direct_trans, trans, check_dtype=True)
+
+
+class TestDropFeatures:
+
+    DROP_FEATURES = ['score']
+
+    @pytest.fixture
+    def data(self):
+
+        data = pd.DataFrame(
+            {
+                'patient': [1, 1, 1, 2, 2],
+                'treatment': [0, 1, 0, 1, 0],
+                'score': ['strong', 'weak', 'normal', 'weak', 'strong']
+            },
+            columns=['patient', 'treatment', 'score']
+        )
+
+        return data
+
+    @pytest.fixture
+    def dropper(self):
+
+        return prep.DropFeatures(features=self.DROP_FEATURES)
+
+    def test_init(self, dropper):
+
+        assert isinstance(dropper, prep.DropFeatures)
+
+    def test_fit(self, data, dropper):
+
+        assert dropper.targets is None
+        dropper.fit(data)
+        assert isinstance(dropper.targets, list)
+
+    def test_transform(self, data, dropper):
+
+        dropper.fit(data)
+        trans = dropper.transform(data)
+
+        target_num_features = data.columns.size - len(self.DROP_FEATURES)
+        assert trans.columns.size == target_num_features
+
+    def test_fit_transform(self, data, dropper):
+
+        direct_trans = dropper.fit_transform(data)
+
+        dropper.fit(data)
+        trans = dropper.transform(data)
 
         assert_frame_equal(direct_trans, trans, check_dtype=True)
