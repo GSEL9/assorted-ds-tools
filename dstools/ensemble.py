@@ -177,3 +177,75 @@ if __name__ == '__main__':
     reg_stack = RegressionStack(learners=regressors)
     reg_stack.fit(X, y)
     reg_pred = reg_stack.predict(X)
+
+
+    # NOTE: Make Grid search example. Use parameter_grid() function.
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.model_selection import GridSearchCV
+    from mlxtend.classifier import StackingClassifier
+
+    # Initializing models
+
+    clf1 = KNeighborsClassifier(n_neighbors=1)
+    clf2 = RandomForestClassifier(random_state=1)
+    clf3 = GaussianNB()
+    lr = LogisticRegression()
+    sclf = StackingClassifier(classifiers=[clf1, clf2, clf3],
+                              meta_classifier=lr)
+
+    params = {'kneighborsclassifier__n_neighbors': [1, 5],
+              'randomforestclassifier__n_estimators': [10, 50],
+              'meta-logisticregression__C': [0.1, 10.0]}
+
+    grid = GridSearchCV(estimator=sclf,
+                        param_grid=params,
+                        cv=5,
+                        refit=True)
+    grid.fit(X, y)
+
+    cv_keys = ('mean_test_score', 'std_test_score', 'params')
+
+    for r, _ in enumerate(grid.cv_results_['mean_test_score']):
+        print("%0.3f +/- %0.2f %r"
+              % (grid.cv_results_[cv_keys[0]][r],
+                 grid.cv_results_[cv_keys[1]][r] / 2.0,
+                 grid.cv_results_[cv_keys[2]][r]))
+
+    print('Best parameters: %s' % grid.best_params_)
+    print('Accuracy: %.2f' % grid.best_score_)
+
+
+    # NOTE: Make Grid search example. Use parameter_grid() function.
+
+    from sklearn.model_selection import GridSearchCV
+    from sklearn.linear_model import Lasso
+
+    # Initializing models
+
+    lr = LinearRegression()
+    svr_lin = SVR(kernel='linear')
+    ridge = Ridge(random_state=1)
+    lasso = Lasso(random_state=1)
+    svr_rbf = SVR(kernel='rbf')
+    regressors = [svr_lin, lr, ridge, lasso]
+    stregr = StackingRegressor(regressors=regressors,
+                               meta_regressor=svr_rbf)
+
+    params = {'lasso__alpha': [0.1, 1.0, 10.0],
+              'ridge__alpha': [0.1, 1.0, 10.0],
+              'svr__C': [0.1, 1.0, 10.0],
+              'meta-svr__C': [0.1, 1.0, 10.0, 100.0],
+              'meta-svr__gamma': [0.1, 1.0, 10.0]}
+
+    grid = GridSearchCV(estimator=stregr,
+                        param_grid=params,
+                        cv=5,
+                        refit=True)
+    grid.fit(X, y)
+
+    for params, mean_score, scores in grid.grid_scores_:
+            print("%0.3f +/- %0.2f %r"
+                  % (mean_score, scores.std() / 2.0, params))
