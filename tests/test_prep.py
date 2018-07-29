@@ -365,8 +365,14 @@ class TestFeatureEncoder:
         _encoder = encoder()
 
         assert _encoder.targets is None
+        assert _encoder.target_labels is None
+
         _encoder.fit(data)
+
         assert isinstance(_encoder.targets, list)
+        assert isinstance(_encoder.target_labels, dict)
+
+        assert len(_encoder.targets) == len(list(_encoder.target_labels.keys()))
 
     def test_transform(self, data, encoder):
 
