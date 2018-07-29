@@ -217,6 +217,60 @@ def train_test_scaling(X, y, test_size=0.2, random_state=None, scaler=None):
     return X_train_std, X_test_std, y_train, y_test
 
 
+class FeatureEncoder(BaseEstimator, TransformerMixin):
+    """Transform the feature data of a target data type according to a
+    specified encoding procedure.
+
+    Attributes:
+        targets (list of str): The feature labels of target data type.
+        encoder (object): An encoder with a `fit_transform()` method.
+
+    """
+
+    def __init__(self, target_dtype='object', encoder=LabelEncoder):
+
+        self.target_dtype = target_dtype
+        self.encoder = encoder()
+
+        # NOTE: Variable set with instance.
+        self.targets = None
+
+    def fit(self, X, y=None, **kwargs):
+        """Determine which features are not numerical."""
+
+        # Determine which features that will be encoded.
+        self.targets = []
+        for feature in X.columns:
+            if X[feature].dtype == self.target_dtype:
+                self.targets.append(feature)
+
+        return self
+
+    def transform(self, X, y=None, **kwargs):
+        """Transform features of target data type with specified encoder
+        procedure.
+
+        Returns:
+            (): The label encoded dataset.
+
+        """
+
+        # TODO: Type checking
+
+        data = X.copy()
+        for feature in self.targets:
+            feature_data = list(data[feature].values)
+            data[feature] = self.encoder.fit_transform(feature_data)
+
+        return data
+
+    def fit_transform(self, X, y=None, **kwargs):
+
+        self.fit(X, y=y, **kwargs)
+
+        return self.transform(X, y=y, **kwargs)
+
+
 # WIP:
 class DropFeatures(BaseEstimator, TransformerMixin):
     """Remove features from dataset."""
@@ -238,67 +292,7 @@ class DropFeatures(BaseEstimator, TransformerMixin):
         return self._data.drop(self.features, axis=1)
 
 
-# WIP:
-class FeatureEncoder(BaseEstimator, TransformerMixin):
-    """Transform the feature data of a target data type according to a
-    specified encoding procedure.
-
-    Attributes:
-        targets (list of str): The feature labels of target data type.
-        encoder (object): An encoder with a `fit_transform()` method.
-
-    """
-
-    def __init__(self, target_dtype='object', encoder=LabelEncoder):
-
-        self.target_dtype = target_dtype
-        self.encoder = encoder()
-
-        # NOTE: Variable set with instance.
-        self.targets = None
-
-    def fit(self, X, y=None):
-        """Determine which features are not numerical."""
-
-        # Determine which features that will be encoded.
-        self.targets = []
-        for feature in X.columns:
-            if X[feature].dtype == self.target_dtype:
-                self.targets.append(feature)
-
-        return self
-
-    def transform(self, X, copy=True):
-        """Transform features of target data type with specified encoder
-        procedure.
-
-        Returns:
-            (): The label encoded dataset.
-
-        """
-
-        if copy:
-            # TODO: Type checking
-            data = X.copy()
-        else:
-            # TODO: Type checking
-            data = X
-
-        # Encode selected features according to specified procedure.
-        for feature in self.targets:
-            feature_data = list(data[feature].values)
-            data[feature] = self.encoder.fit_transform(feature_data)
-
-        return data
-
-
 if __name__ == '__main__':
-
-    """
-    DOTO:
-        * Check how LabelEncoder actually works.
-        * Mimick LabelEncoder in mock and complete tests.
-    """
 
     import pandas as pd
     from pytest import approx
@@ -313,37 +307,17 @@ if __name__ == '__main__':
 
         return X, y
 
-    #data, _ = data()
+    data = pd.DataFrame(
+        {
+            'patient': [1, 1, 1, 2, 2],
+            'treatment': [0, 1, 0, 1, 0],
+            'score': ['strong', 'weak', 'normal', 'weak', 'strong']
+        },
+        columns=['patient', 'treatment', 'score']
+    )
 
-    np.random.seed(123)
-    df = pd.DataFrame(np.random.random((10, 4)))
+    # Encoding nominal data
 
-    filter1 = RemoveOutliers()
-    filter1.fit(df)
-    df_clean = filter1.transform(df)
-
-    filter2 = RemoveOutliers()
-    df_clean2 = filter2.fit_transform(df)
-
-
-    class MockEncoder:
-        """Mocking a feature encoder object."""
-
-        def __init__(self):
-
-            self.old_keys = None
-            self.new_keys = None
-
-        def fit(self, X, y=None, **kwargs):
-
-            pass
-
-        def transform(self, X):
-
-            pass
-
-        def fit_transform(self, X, y=None, **kwargs):
-
-            self.fit(X, y=y, **kwargs)
-
-            return self.transform(X)
+    encoder = FeatureEncoder()
+    encoder.fit(data)
+    data_enc = encoder.transform(data)
