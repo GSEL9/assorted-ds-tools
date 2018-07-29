@@ -25,8 +25,24 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 
+# TODO:
+class FeatureEngineering:
+
+    def __init__(self):
+
+        raise NotImplementedError('')
+
+
+# TODO:
+class FeatureSelection:
+
+    def __init__(self):
+
+        raise NotImplementedError('')
+
+
 class FeatureScaling:
-    """Scale feature data."""
+    """Scale all features in dataset."""
 
     # NOTE: Fit standard scaler to training data to learn training data
     # parameters. Transform both training data and test data with training
@@ -57,7 +73,7 @@ class FeatureScaling:
 
 
 class Clone(BaseEstimator, TransformerMixin):
-    """Clone dataset."""
+    """Clone a dataset."""
 
     def __init__(self):
 
@@ -84,7 +100,7 @@ class Clone(BaseEstimator, TransformerMixin):
 
 
 class FeatureImputer(BaseEstimator, TransformerMixin):
-    """Impute missing values by specified fill value or method.
+    """Impute all features with missing values in dataset.
 
     Args:
         method (str, {mean, median, most_frequent}): The imputation strategy.
@@ -139,7 +155,7 @@ class FeatureImputer(BaseEstimator, TransformerMixin):
 
 
 class RemoveOutliers(BaseEstimator, TransformerMixin):
-    """Remove outliers from dataset using percentiles.
+    """Remove outliers from all features in a dataset using percentiles.
 
     Attributes:
         quantiles (pandas.DataFrame): The feature values considered outside the
@@ -181,49 +197,16 @@ class RemoveOutliers(BaseEstimator, TransformerMixin):
         return self.transform(X, y=y, **kwargs)
 
 
-
-def train_test_scaling(X, y, test_size=0.2, random_state=None, scaler=None):
-    """Split original feature data into training and test splits including
-    standardization.
+# TODO: Check how to include dummy encoding.
+class FeatureEncoder(BaseEstimator, TransformerMixin):
+    """Apply an encoding procedure to all features in a dataset.
 
     Args:
-        X (array-like): An (n x m) array of feature samples.
-        y (array-like): An (n x 1) array of target samples.
-        test_size (float): The fraction of data used in validation.
-        scaler (object): A feature data scaler object.
-        random_state (int): The random number generator intiator.
-
-    Returns:
-        (tuple): Standardized training and test sets of feature and target
-            data.
-
-    """
-
-    # NOTE: Should be function not class since dependent of random numer
-    # intiator and thus cannot be included in pipeline.
-
-    # Generate training and test sets.
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_size, random_state=random_state
-    )
-    # Scale feature data with default parameters.
-    if scaler is None:
-        _scaler = FeatureScaling()
-    else:
-        _scaler = FeatureScaling(scaler=scaler)
-    X_train_std = _scaler.fit_transform(X_train)
-    X_test_std = _scaler.transform(X_test)
-
-    return X_train_std, X_test_std, y_train, y_test
-
-
-class FeatureEncoder(BaseEstimator, TransformerMixin):
-    """Transform the feature data of a target data type according to a
-    specified encoding procedure.
+        target_dtype (str):
+        encoder (object):
 
     Attributes:
         targets (list of str): The feature labels of target data type.
-
 
     """
 
@@ -274,7 +257,7 @@ class FeatureEncoder(BaseEstimator, TransformerMixin):
 
 
 class DropFeatures(BaseEstimator, TransformerMixin):
-    """Remove features from dataset.
+    """Remove specified features from a dataset.
 
     Attributes:
         targets (list):
@@ -310,3 +293,38 @@ class DropFeatures(BaseEstimator, TransformerMixin):
         self.fit(X, y=y, **kwargs)
 
         return self.transform(X, y=y, **kwargs)
+
+
+def train_test_scaling(X, y, test_size=0.2, random_state=None, scaler=None):
+    """Split original feature data into training and test splits including
+    standardization.
+
+    Args:
+        X (array-like): An (n x m) array of feature samples.
+        y (array-like): An (n x 1) array of target samples.
+        test_size (float): The fraction of data used in validation.
+        scaler (object): A feature data scaler object.
+        random_state (int): The random number generator intiator.
+
+    Returns:
+        (tuple): Standardized training and test sets of feature and target
+            data.
+
+    """
+
+    # NOTE: Should be function not class since dependent of random numer
+    # intiator and thus cannot be included in pipeline.
+
+    # Generate training and test sets.
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=random_state
+    )
+    # Scale feature data with default parameters.
+    if scaler is None:
+        _scaler = FeatureScaling()
+    else:
+        _scaler = FeatureScaling(scaler=scaler)
+    X_train_std = _scaler.fit_transform(X_train)
+    X_test_std = _scaler.transform(X_test)
+
+    return X_train_std, X_test_std, y_train, y_test
