@@ -23,6 +23,7 @@ from . import mocking
 
 from pytest import approx
 from dstools import prep
+from pandas.util.testing import assert_frame_equal
 
 
 class TestFeatureScaling:
@@ -164,58 +165,6 @@ class TestTrainTestScaling:
         assert int(X_train.shape[0]) / int(X.shape[0]) == 1 - self.TEST_SIZE
 
 
-class TestDiscardOutliers:
-
-    FIELD = 'logerror'
-    MIN_VAL = -0.4
-    MAX_VAL = 0.4
-
-    THRESH = 1.e-10
-
-    @pytest.fixture
-    def data(self):
-
-        return None
-
-    @pytest.fixture
-    def discarder(self):
-
-        _filter = prep.DiscardOutliers(
-            field=self.FIELD, min_val=self.MIN_VAL, max_val=self.MAX_VAL
-        )
-
-        return _filter
-
-    def test_init(self, discarder):
-
-        assert isinstance(discarder, prep.DiscardOutliers)
-
-    def test_fit(self, discarder, data):
-
-        #discarder().fit(data)
-        pass
-
-    def test_query(self, discarder, data):
-
-        #discarder.fit(data)
-        #assert isinstance(discarder.query, str)
-        pass
-
-    def test_min_val(self, discarder):
-
-        assert discarder.min_val == approx(self.MIN_VAL, rel=self.THRESH)
-
-    def test_max_val(self, discarder):
-
-        assert discarder.max_val == approx(self.MAX_VAL, rel=self.THRESH)
-
-    def test_transform(self, discarder, data):
-
-        #discarder.fit(data)
-        #discarder.transform(data)
-        pass
-
-
 class TestClone:
 
     SEED = 123
@@ -329,3 +278,51 @@ class TestFeatureImputer:
             imputed_data = _imputer.transform(data)
 
             assert isinstance(imputed_data, pd.DataFrame)
+
+
+class TestRemoveOutliers:
+
+    SEED = 123
+
+    @pytest.fixture
+    def data(self):
+
+        np.random.seed(self.SEED)
+
+        return pd.DataFrame(np.random.random((10, 4)))
+
+    @pytest.fixture
+    def filter(self):
+
+        return prep.RemoveOutliers
+
+    def test_init(self, filter):
+
+        assert isinstance(filter(), prep.RemoveOutliers)
+
+    def test_fit(self, data, filter):
+
+        _filter = filter()
+
+        assert _filter.quantiles is None
+        _filter.fit(data)
+        assert isinstance(_filter.quantiles, pd.DataFrame)
+
+    def test_transform(self, data, filter):
+
+        _filter = filter()
+
+        _filter.fit(data)
+        data_clean = _filter.transform(data)
+
+        assert np.any(data_clean.isnull().sum())
+
+    def test_fit_transform(self, data, filter):
+
+        direct_trans = filter().fit_transform(data)
+
+        _filter = filter()
+        _filter.fit(data)
+        trans = _filter.transform(data)
+
+        assert_frame_equal(direct_trans, trans, check_dtype=True)
