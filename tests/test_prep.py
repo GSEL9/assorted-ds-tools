@@ -326,3 +326,63 @@ class TestRemoveOutliers:
         trans = _filter.transform(data)
 
         assert_frame_equal(direct_trans, trans, check_dtype=True)
+
+
+class TestFeatureEncoder:
+
+    SEED = 123
+
+    @pytest.fixture
+    def data(self):
+
+        data = pd.DataFrame(
+            {
+                'patient': [1, 1, 1, 2, 2],
+                'treatment': [0, 1, 0, 1, 0],
+                'score': ['strong', 'weak', 'normal', 'weak', 'strong']
+            },
+            columns=['patient', 'treatment', 'score']
+        )
+
+        return data
+
+    @pytest.fixture
+    def encoder(self):
+
+        return prep.FeatureEncoder
+
+    def test_default_encoder(self, encoder):
+
+        assert isinstance(encoder(), prep.FeatureEncoder)
+
+    def test_custom_encoder(self, encoder):
+
+        _encoder = encoder(encoder=mocking.MockEncoder)
+        assert isinstance(_encoder, prep.FeatureEncoder)
+
+    def test_fit(self, data, encoder):
+
+        _encoder = encoder()
+
+        assert _encoder.targets is None
+        _encoder.fit(data)
+        assert isinstance(_encoder.targets, list)
+
+    def test_transform(self, data, encoder):
+
+        _encoder = encoder()
+
+        _encoder.fit(data)
+        data_trans = _encoder.transform(data)
+
+        assert any(data_trans.dtypes != 'object')
+
+    def test_fit_transform(self, data, encoder):
+
+        direct_trans = encoder().fit_transform(data)
+
+        _encoder = encoder()
+        _encoder.fit(data)
+        trans = _encoder.transform(data)
+
+        assert_frame_equal(direct_trans, trans, check_dtype=True)
