@@ -16,122 +16,164 @@ __email__ = 'Langberg91@gmail.no'
 
 import numpy as np
 
-from dstools.utils import BaseLearner
-from dstools.prep import train_test_scaling
+from scipy import sparse
+from dstools.base import StackingBase
+from sklearn.utils.validation import check_X_y, check_array
 
 
-class Stacking:
-    """Stacking is a way of combining multiple models, that introduces the
-    concept of a meta learner.
+class ClassifierStack(StackingBase):
+    """An ensemble learning technique to combine multiple classification models
+    via a meta-classifier."""
 
-    Enables combining models of different types.
+    def __init__(self, learners, random_state=None, use_probas=False):
 
-    Algorithm:
-        1. Split the training set into sub training and test sets.
-        2. Train base learners on the sub training set.
-        3. Generate predictions from the base learners on sub test set.
-        4. Consider the generated base learner perdictions as training data,
-           and use the ground truth samples as reference for the end learner
+        super().__init__(learners, random_state)
 
-    """
+        self.use_probas = use_probas
 
-    def __init__(self, learners, random_state=None):
+    def fit(self, X, y, verbose=True, **kwargs):
 
-        self.base_learners = learners[:-1]
-        self.end_learner = learners[-1]
-        self.random_state = random_state
+        _X, _y = check_X_y(X, y)
 
-    @property
-    def base_learners(self):
+        for leaner in self.base_learners:
 
-        return self._base_learners
+            if verbose:
+                print('Training classifier: `{}`'.format(type(leaner)))
 
-    @base_learners.setter
-    def base_learners(self, value):
+            leaner.fit(_X, _y)
 
-        if isinstance(value, (list, tuple, np.ndarray)):
-            self._base_learners = [BaseLearner(learner) for learner in value]
+        meta_features = self.gen_meta_features(_X)
+        if sparse.issparse(_X):
+            self.end_learner.fit(sparse.hstack((_X, meta_features)), _y)
         else:
-            self._base_learners = BaseLearner(value)
+            self.end_learner.fit(np.hstack((_X, meta_features)), _y)
 
-    @property
-    def end_learner(self):
+        return self
 
-        return self._end_learner
+    def gen_meta_features(self, X):
 
-    @end_learner.setter
-    def end_learner(self, value):
+        self._check_learners_fitted()
 
-        # TODO: Type checking.
-        self._end_learner = value
-
-    def fit(self, X, y, test_size=0.2, n_folds=10, scale=True):
-        """Train an end learner from a stack of base learners."""
-
-        # Train base learners on the sub training set and generate predictions
-        # from the base learners on sub test set.
-        stack_X_train, stack_X_test = _gen_stack_feature_data(
-            X, y, test_size, n_folds, scale=scale
-        )
-        # Train end learner on aggregated base learner predictions.
-        self.end_learner.fit(stack_X_train, y_train)
-
-    def _gen_train_subsets(self, X, y, test_size, scale):
-        # Divide training data into stratified training and test sub splits.
-
-        if scale:
-            X_train, X_test, y_train, y_test = train_test_scaling(
-                X, y, test_size, self.random_state
+        if self.use_probas:
+            probas = np.asarray(
+                [learner.predict_proba(X) for learner in self.base_learners]
             )
+            meta_features = np.concatenate(probas, axis=1)
+
         else:
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=test_size, random_state=self.random_state
+            meta_features = np.column_stack(
+                [learner.predict(X) for learner in self.base_learners]
             )
 
-        return X_train, X_test, y_train, y_test
-
-    def _gen_stack_feature_data(self, X, y, test_size, n_folds, scale):
-        # Aggregate predictions from base learners.
-
-        X_train, X_test, y_train, y_test = self._gen_train_subsets(
-            X, y, test_size, scale
-        )
-        # Collect base learner predictions as new feature data.
-        train_preds, test_preds = [], []
-        for learner in self.base_learners:
-            estimator = learner(random_state=self.random_state)
-            train_preds.append(
-                cross_val_predict(estimator, X_train, y_train, cv=n_folds)
-            )
-            test_preds.append(
-                cross_val_predict(estimator, X_test, cv=n_folds)
-            )
-        stack_X_train = np.concatenate(train_preds, axis=1).astype(float)
-        stack_X_test = np.concatenate(test_preds, axis=1).astype(float)
-
-        return stack_X_train, stack_X_test
+        return meta_features
 
     def predict(self, X):
 
-        return self.end_learner.predict(X)
+        self._check_learners_fitted()
 
-    # TEMP:
-    def _gen_base_predictions(self, clf, Xtrain, ytrain, Xtest, n_folds):
+        _X = check_array(X)
+        meta_features = self.gen_meta_features(_X)
+        if sparse.issparse(_X):
+            return self.end_learner.predict(sparse.hstack((_X, meta_features)))
+        else:
+            return self.end_learner.predict(np.hstack((_X, meta_features)))
 
-        ntrain, ntest = Xtrain.shape[0], Xtest.shape[0]
+    def predict_proba(self, X):
 
-        kfold_test_skf = np.empty((n_folds, ntest))
-        kfold_train, kfold_test = np.zeros((ntrain,)), np.zeros((ntest,))
+        self._check_learners_fitted()
 
-        splits = StratifiedKFold(n_splits=n_folds).split(Xtrain, ytrain)
+        _X = check_array(X)
+        meta_features = self.gen_meta_features(_X)
+        if sparse.issparse(_X):
+            return self.end_learner.predict_proba(
+                sparse.hstack((_X, meta_features))
+            )
+        else:
+            return self.end_learner.predict_proba(
+                np.hstack((_X, meta_features))
+            )
 
-        for idx, (train_idx, test_idx) in enumerate(splits):
-            X_test_sub = X_train[test_idx]
-            X_train_sub, y_train_sub = X_train[train_idx], y_train[train_idx]
 
-            clf.fit(X_train_sub, y_train_sub)
-            kfold_train[test_idx] = clf.predict(X_test_sub)
-            kfold_test_skf[idx, :] = clf.predict(X_test)
-        kfold_test[:] = kfold_test_skf.mean(axis=0)
+class RegressionStack(StackingBase):
 
-        return kfold_train.reshape(-1, 1), kfold_test.reshape(-1, 1)
+    def __init__(self, learners, random_state=None):
+
+        super().__init__(learners, random_state)
+
+    @property
+    def coef_(self):
+
+        return self.meta_regr_.coef_
+
+    @property
+    def intercept_(self):
+
+        return self.meta_regr_.intercept_
+
+    def fit(self, X, y, verbose=True, **kwargs):
+
+        _X, _y = check_X_y(X, y)
+
+        for learner in self.base_learners:
+
+            if verbose:
+                print('Training classifier: `{}`'.format(type(learner)))
+
+            learner.fit(_X, _y)
+
+        meta_features = self.gen_meta_features(_X)
+        if sparse.issparse(_X):
+            self.end_learner.fit(sparse.hstack((_X, meta_features)), _y)
+        else:
+            self.end_learner.fit(np.hstack((_X, meta_features)), _y)
+
+        return self
+
+    def gen_meta_features(self, X):
+
+        self._check_learners_fitted()
+
+        return np.column_stack(
+            [learner.predict(X) for learner in self.base_learners]
+        )
+
+    def predict(self, X):
+
+        self._check_learners_fitted()
+
+        _X = check_array(X)
+        meta_features = self.gen_meta_features(X)
+
+        if sparse.issparse(_X):
+            return self.end_learner.predict(sparse.hstack((_X, meta_features)))
+        else:
+            return self.end_learner.predict(np.hstack((_X, meta_features)))
+
+
+if __name__ == '__main__':
+
+    from sklearn import datasets
+
+    iris = datasets.load_iris()
+    X, y = iris.data[:, 1:3], iris.target
+
+    # Classification
+    from sklearn import model_selection
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.ensemble import RandomForestClassifier
+
+    classifiers = [RandomForestClassifier(), LogisticRegression()]
+    clf_stack = ClassifierStack(learners=classifiers)
+    clf_stack.fit(X, y)
+    clf_pred = clf_stack.predict(X)
+    clf_stack.predict_proba(X)
+
+    # Regression
+    from sklearn.linear_model import LinearRegression
+    from sklearn.linear_model import Ridge
+
+    regressors = [Ridge(), LinearRegression()]
+    reg_stack = RegressionStack(learners=regressors)
+    reg_stack.fit(X, y)
+    reg_pred = reg_stack.predict(X)
