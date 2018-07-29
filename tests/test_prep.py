@@ -25,7 +25,7 @@ from pytest import approx
 from dstools import prep
 
 
-class TestStandardizer:
+class TestFeatureScaling:
 
     # Arbitrary initiator to random number generator.
     SEED = 123
@@ -43,17 +43,15 @@ class TestStandardizer:
     @pytest.fixture
     def scaler(self):
 
-        scaler = prep.Standardizer
-
-        return scaler
+        return prep.FeatureScaling
 
     def test_default_scaler(self, scaler):
 
-        assert isinstance(scaler(), prep.Standardizer)
+        assert isinstance(scaler(), prep.FeatureScaling)
 
     def test_custom_scaler(self, scaler):
 
-        assert isinstance(scaler(scaler=mocking.MockScaler), prep.Standardizer)
+        assert isinstance(scaler(scaler=mocking.MockScaler), prep.FeatureScaling)
 
     def test_fit(self, scaler, data):
 
@@ -61,24 +59,24 @@ class TestStandardizer:
 
     def test_transform(self, scaler, data):
 
-        standardizer = scaler()
-        standardizer.fit(data)
-        standardizer.transform(data)
+        scaler = scaler()
+        scaler.fit(data)
+        scaler.transform(data)
 
     def test_mean(self, data, scaler):
 
-        standardizer = scaler()
-        standardizer.fit(data)
-        data_trans = standardizer.transform(data)
+        scaler = scaler()
+        scaler.fit(data)
+        data_trans = scaler.transform(data)
 
         data_avg = np.mean(data_trans, axis=0)
         assert data_avg == approx(np.zeros((data_avg.shape)), rel=self.THRESH)
 
     def test_std(self, data, scaler):
 
-        standardizer = scaler()
-        standardizer.fit(data)
-        data_trans = standardizer.transform(data)
+        scaler = scaler()
+        scaler.fit(data)
+        data_trans = scaler.transform(data)
 
         data_std = np.std(data_trans, axis=0)
         assert data_std == approx(np.ones((data_std.shape)), rel=self.THRESH)
@@ -100,7 +98,7 @@ class TestTrainTestScaling:
 
     THRESH = 1.e-10
 
-    SPLIT_SIZE = 0.2
+    TEST_SIZE = 0.2
 
     @pytest.fixture
     def data(self):
@@ -120,7 +118,7 @@ class TestTrainTestScaling:
 
         X, y = data
         X_train, _, _, _ = prep.train_test_scaling(
-            X, y, self.SPLIT_SIZE, self.SEED
+            X, y, self.TEST_SIZE, self.SEED
         )
         train_avg = np.mean(X_train, axis=0)
         assert train_avg == approx(np.zeros((train_avg.shape)), rel=self.THRESH)
@@ -132,7 +130,7 @@ class TestTrainTestScaling:
 
         X, y = data
         X_train, _, _, _ = prep.train_test_scaling(
-            X, y, self.SPLIT_SIZE, self.SEED
+            X, y, self.TEST_SIZE, self.SEED
         )
         train_std = np.std(X_train, axis=0)
         assert train_std == approx(np.ones((train_std.shape)), rel=self.THRESH)
@@ -143,7 +141,7 @@ class TestTrainTestScaling:
         org_num_rows, org_num_cols = X.shape
 
         X_train, X_test, y_train, y_test = prep.train_test_scaling(
-            X, y, self.SPLIT_SIZE, self.SEED
+            X, y, test_size=self.TEST_SIZE, random_state=self.SEED
         )
         assert X_train.shape[1] == org_num_cols
         assert X_test.shape[1] == org_num_cols
@@ -160,10 +158,10 @@ class TestTrainTestScaling:
         org_num_rows, org_num_cols = X.shape
 
         X_train, X_test, y_train, y_test = prep.train_test_scaling(
-            X, y, self.SPLIT_SIZE, self.SEED
+            X, y, test_size=self.TEST_SIZE, random_state=self.SEED
         )
-        assert int(X_test.shape[0]) / int(X.shape[0]) == self.SPLIT_SIZE
-        assert int(X_train.shape[0]) / int(X.shape[0]) == 1 - self.SPLIT_SIZE
+        assert int(X_test.shape[0]) / int(X.shape[0]) == self.TEST_SIZE
+        assert int(X_train.shape[0]) / int(X.shape[0]) == 1 - self.TEST_SIZE
 
 
 class TestDiscardOutliers:
@@ -260,3 +258,74 @@ class TestClone:
 
         assert np.array_equal(data, copy)
         assert copy is not data
+
+
+class TestFeatureImputer:
+
+    SEED = 123
+
+    IMPUTE_VAL = np.nan
+
+    @pytest.fixture
+    def data(self):
+
+        np.random.seed(self.SEED)
+
+        df = pd.DataFrame(np.random.random((10, 4)))
+        df.iloc[3:5, 0] = self.IMPUTE_VAL
+        df.iloc[6:8, 2] = self.IMPUTE_VAL
+        df.iloc[2:4, 3] = self.IMPUTE_VAL
+
+        return df
+
+    @pytest.fixture
+    def imputer(self):
+
+        imputer = prep.FeatureImputer
+
+        return imputer
+
+    def test_default_imputer(self, imputer):
+
+        assert isinstance(imputer(), prep.FeatureImputer)
+
+    def test_custom_imputer(self, imputer):
+
+        _imputer = imputer(imputer=mocking.MockImputer)
+        assert isinstance(_imputer, prep.FeatureImputer)
+
+    def test_fit(self, imputer, data):
+
+        _imputer = imputer()
+        assert _imputer.targets is None
+
+        _imputer.fit(data)
+        assert isinstance(_imputer.targets, list)
+
+    def test_transform(self, imputer, data):
+
+        _imputer = imputer()
+        _imputer.fit(data)
+        imputed_data = _imputer.transform(data)
+
+        assert np.all(imputed_data.isnull().sum() == 0)
+
+    def test_fit_transform(self, imputer, data):
+
+        imputed_data_direct = imputer().fit_transform(data)
+
+        _imputer = imputer()
+        _imputer.fit(data)
+        imputed_data = _imputer.transform(data)
+
+        assert np.array_equal(imputed_data_direct, imputed_data)
+
+    def test_impute_strategies(self, imputer, data):
+
+        strategies = ['mean', 'median', 'most_frequent']
+        for strategy in strategies:
+            _imputer = imputer(method=strategy)
+            _imputer.fit(data)
+            imputed_data = _imputer.transform(data)
+
+            assert isinstance(imputed_data, pd.DataFrame)
