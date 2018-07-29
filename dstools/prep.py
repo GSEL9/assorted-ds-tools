@@ -223,7 +223,7 @@ class FeatureEncoder(BaseEstimator, TransformerMixin):
 
     Attributes:
         targets (list of str): The feature labels of target data type.
-        encoder (object): An encoder with a `fit_transform()` method.
+
 
     """
 
@@ -234,15 +234,17 @@ class FeatureEncoder(BaseEstimator, TransformerMixin):
 
         # NOTE: Variable set with instance.
         self.targets = None
+        self.target_labels = None
 
     def fit(self, X, y=None, **kwargs):
         """Determine which features are not numerical."""
 
         # Determine which features that will be encoded.
-        self.targets = []
+        self.targets, self.target_labels = [], {}
         for feature in X.columns:
             if X[feature].dtype == self.target_dtype:
                 self.targets.append(feature)
+                self.target_labels[feature] = np.unique(X[feature])
 
         return self
 
@@ -320,4 +322,4 @@ if __name__ == '__main__':
 
     encoder = FeatureEncoder()
     encoder.fit(data)
-    data_enc = encoder.transform(data)
+    #data_enc = encoder.transform(data)
