@@ -124,7 +124,7 @@ def transposed_virtual_error(bicluster):
 
 
 def avg_spearmans_rho(bicluster):
-    """Compute the Average Spearman's Rho for a bicluster. A result
+    """Compute the Average Spearman's Rho for a bicluster. A lower result
     close to 1 or -1 indicates a better bicluster.
 
     Ref.:
@@ -149,7 +149,6 @@ def avg_spearmans_rho(bicluster):
         return 0.0
     else:
         _genes, _samples = 0, 0
-
         for prev_row in range(nrows - 1):
             for next_row in range(prev_row + 1, nrows):
 
@@ -201,14 +200,5 @@ if __name__ == '__main__':
 
     bic = np.ones((10, 7)) + np.random.normal(0, 0.01, (10, 7))
 
-    msr = mean_squared_residue(bic)
+    msr = avg_spearmans_rho(bic)
     print(msr)
-
-    smsr = scaled_mean_squared_residue(bic)
-    print(smsr)
-
-    tve = transposed_virtual_error(bic)
-    print(tve)
-
-    asr = avg_spearmans_rho(bic)
-    print(asr)
