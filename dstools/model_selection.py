@@ -2,209 +2,218 @@
 #
 # model_selection.py
 #
-# This module is part of dstools.
-#
 
 """
-Tools for comparing algorithms and hyperparameter optimization.
+Frameworks for performing model selection.
 """
 
-__author__ = 'Severin E. R. Langberg'
-__email__ = 'Langberg91@gmail.no'
+__author__ = 'Severin Langberg'
+__email__ = 'langberg91@gmail.com'
 
+
+import os
+import utils
+import ioutil
+import model_selection
+import feature_selection
 
 import numpy as np
+import pandas as pd
 
-from sklearn.pipeline import Pipeline
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import cross_val_score
-
-from dstools.utils import score_stats
-from dstools.prep import train_test_scaling
+from datetime import datetime
+from collections import OrderedDict
+from sklearn.externals import joblib
 
 
-def compare_estimators(X, y, models_and_params, scoring, test_size=0.3, folds=10):
-    """Compares estimators through a nested k-fold stratified cross-validation
-    scheme across random states.
+THRESH = 1
 
-    Args:
-        X (array-like): An (n x m) array of feature samples.
-        y (array-like): An (n x 1) array of target samples.
-        models_and_params (tuple): A nested iterable of
-            (`model`, `grid parameters`) where `model` referes to the <>
-            learning algorithm and `grid parameters` represents a <dict> of
-            hyperparameter name and values in iterable as key-value pairs.
-        test_size (float): The fraction of data used in validation.
-        folds (int): The number of folds to generate in cross validation.
-        scoring (): The estimator evaluation scoring metric.
 
-    Returns:
-        (dict): The training and test scores of each estimator averaged across
-            each random state.
+def _check_estimator(nfeatures, hparams, estimator, random_state):
 
-    """
+    # Using all available features after feature selection.
+    if 'n_components' in hparams:
+        if nfeatures - 1 < 1:
+            hparams['n_components'] = 1
+        else:
+            hparams['n_components'] = nfeatures - 1
+    # If stochastic algorithms.
+    try:
+        model = estimator(**hparams, random_state=random_state)
+    except:
+        model = estimator(**hparams)
 
-    results = {}
-    for model_name, (model, param_grid) in models_and_params.items():
+    try:
+        model.n_jobs = -1
+    except:
+        pass
 
-        results[model_name] = {'train_scores': [], 'test_scores': []}
-        # Address model stochasticity by eval across multiple random states.
-        for random_state in range(2):
+    return model
 
-            if isinstance(model, Pipeline):
-                estimator = model
-            else:
-                estimator = model(random_state=random_state)
-            # Collect training and test scores from nested cross-validation.
-            train_scores, test_scores = nested_cross_val(
-                X, y, test_size, random_state, estimator, param_grid, scoring, folds
-            )
-            results[model_name]['train_scores'].append(np.mean(train_scores))
-            results[model_name]['test_scores'].append(np.mean(test_scores))
 
-        # Print model training and test performance.
-        model_performance_report(model_name, train_scores, test_scores)
+def _update_prelim_results(results, path_tempdir, random_state, *args):
+    # Update results <dict> container and write preliminary results to disk.
+    (
+        estimator, selector, best_params, avg_test_scores, avg_train_scores,
+        best_features
+    ) = args
+
+    results.update(
+        {
+            'model': estimator.__name__,
+            'selector': selector['name'],
+            'best_params': best_params,
+            'avg_test_score': avg_test_scores,
+            'avg_train_score': avg_train_scores,
+            'best_features': best_features,
+            'num_features': np.size(best_features)
+        }
+    )
+    # Write preliminary results to disk.
+    path_case_file = os.path.join(
+        path_tempdir, '{}_{}_{}'.format(
+            estimator.__name__, selector['name'], random_state
+        )
+    )
+    ioutil.write_prelim_results(path_case_file, results)
 
     return results
 
 
-def nested_cross_val(*args):
-    """Perform nested cross validation of estimator performance.
-
-    Args:
-        X (array-like): An (n x m) array of feature samples.
-        y (array-like): An (n x 1) array of target samples.
-        estimator (class): The learning algorithm.
-        params (dict): The hyperparameter grid with parameter name and iterable
-            parameter values as key-value pairs.
-        random_state (int): The random number generator intiator.
-        test_size (float): The fraction of data used in validation.
-        folds (int): The number of folds to generate in cross validation.
-        scoring ():
-
-    Returns:
-        (tuple): Cross validated training and test scores.
-
+def nested_point632plus(*args, verbose=1, n_jobs=1, score_func=None):
     """
 
-    # Construct training and test splits including scaling of feature data.
-    X_train_std, X_test_std, y_train, y_test = train_test_scaling(
-        args[0], args[1], test_size=args[2], random_state=args[3]
-    )
-    # Perform cross-validated hyperparameter search.
-    cv_grid = GridSearchCV(
-        estimator=args[4], param_grid=args[5], scoring=args[6], cv=args[7]
-    )
-    cv_grid.fit(X_train_std, y_train)
-    # Array of scores of the estimator for each run of the cross validation.
-    cv_train_score = cross_val_score(cv_grid, X_train_std, y_train)
-    cv_test_score = cross_val_score(cv_grid, X_test_std, y_test)
-
-    return cv_train_score, cv_test_score
-
-
-def model_performance_report(name, train_scores, test_scores):
-    """Prints a model performance report including training and test scores,
-    and the difference between the training and test scores."""
-
-    print('Model performance report', '\n{}'.format('-' * 25))
-    print('Name: {}\nTraining scores: {} +/- {}\nTest scores: {} +/- {}'
-          ''.format(name,
-                    np.round(np.mean(train_scores), decimals=3),
-                    np.round(np.std(train_scores), decimals=3),
-                    np.round(np.mean(test_scores), decimals=3),
-                    np.round(np.std(test_scores), decimals=3)))
-
-    print('Train-test difference: {}\n'
-          ''.format(np.mean(train_scores) - np.mean(test_scores))
-    )
-
-
-def report_best_model(results, criteria='variance'):
-    """Determines the optimal model by evaluating the model performance results
-    according to a specified criteria.
-
-    Args:
-        results ():
-        criteria (str, {bias, variance}): Decision rule for model performance comparison.
-            Is `variance` criteria: Selects the model corresponding to the minimum difference
-            between the training and test scores. If `bias` criteria: Selects the model
-            corresponding to the maximum test score.
-
     """
+    (
+        X, y, estimator, hparam_grid, selector, n_splits, random_state,
+        path_tempdir
+    ) = args
 
-    if criteria == 'bias':
-        init_score = -np.float('inf')
-    elif criteria == 'variance':
-        init_score = np.float('inf')
+    # Setup:
+    path_case_file = os.path.join(
+        path_tempdir, '{}_{}_{}'.format(
+            estimator.__name__, selector['name'], random_state
+        )
+    )
+    if os.path.isfile(path_case_file):
+        results = ioutil.read_prelim_result(path_case_file)
+        if verbose > 0:
+            print('Reloading previous results')
+
     else:
-        raise ValueError('Invalid evaluation criteria: `{}`'.format(criteria))
+        if verbose > 0:
+            start_time = datetime.now()
+            print('Entering nested procedure with ID: {}'.format(random_state))
+        results = _nested_point632plus(
+            *args, verbose=verbose, score_func=score_func, n_jobs=n_jobs
+        )
+        if verbose > 0:
+            delta_time = datetime.now() - start_time
+            print('Collected results in: {}'.format(delta_time))
 
-    best_model, best_score = None, init_score
-    for model_name, scores in results.items():
-
-        keys, (train, test) = list(scores.keys()), list(scores.values())
-
-        if criteria == 'bias':
-            score = np.max(test)
-            if score > best_score:
-                best_model, best_score = model_name, score
-            else:
-                continue
-
-        elif criteria == 'variance':
-            score = np.min(np.squeeze(train) - np.squeeze(test))
-            if score < best_score:
-                best_model, best_score = model_name, score
-            else:
-                continue
-
-    print('Best model report', '\n{}'.format('-' * 20))
-    print('Name: {}\nCriteria: {}\nBest score: {}'.format(best_model,
-                                                           criteria,
-                                                           best_score))
-
-    return None
+    return results
 
 
-def parameter_grid(grid_specs, pipeline=False):
-    """Transforms a set of grid search specifications into a pipeline compatible
-    parameter grid.
+def _nested_point632plus(*args, n_jobs=None, score_func=None, verbose=1):
+    # The worker function for the nested .632+ Out-of-Bag model comparison
+    # scheme.
+    (
+        X, y, estimator, hparam_grid, selector, n_splits, random_state,
+        path_tempdir
+    ) = args
 
-    Args:
-        grid_specs (tuple): A nested iterable of (`model`, `grid parameters`)
-            where `model` referes to the learning algorithm and
-            `grid parameters` represents a <dict> of hyperparameter name and
-            values in iterable as key-value pairs.
+    global THRESH
 
-    Returns:
-        (dict): The formatted grid search package containing the learning
-            algorithms and correpsonding hyperparameters.
+    # Setup:
+    results = {'experiment_id': random_state}
+    features = np.zeros(X.shape[1], dtype=int)
 
-    """
+    oob_sampler = utils.BootstrapOutOfBag(
+        n_splits=n_splits, random_state=random_state
+    )
+    # Outer loop for best models average performance.
+    train_scores, test_scores, opt_hparams = [], [], []
+    for num, (train_idx, test_idx) in enumerate(oob_sampler.split(X, y)):
 
-    models_and_parameters = {}
-    for model, params in grid_specs:
+        X_train, X_test = X[train_idx], X[test_idx]
+        y_train, y_test = y[train_idx], y[test_idx]
 
-        if pipeline:
-            model_name = str(model.steps[-1][0])
-        else:
-            model_name = str(model.__name__).lower()
+        best_model, best_support = grid_search_oob(
+            estimator, hparam_grid, selector, X_train, y_train, n_splits,
+            random_state, verbose=verbose, score_func=score_func, n_jobs=n_jobs
+        )
+        best_model = _check_estimator(
+            np.size(best_support), best_model.get_params(), estimator,
+            random_state=random_state
+        )
+        train_score, test_score = utils.scale_fit_predict632(
+            best_model, X_train[:, best_support], X_test[:, best_support],
+            y_train, y_test, score_func=score_func
+        )
+        train_scores.append(train_score), test_scores.append(test_score)
+        # Bookeeping of best feature subset and hparams in each fold.
+        features[best_support] += 1
+        opt_hparams.append(best_model.get_params())
 
-        models_and_parameters[model_name] = (model, {})
-        for key, value in params.items():
+    try:
+        # NOTE: Selecting mode of hparams as opt hparam settings.
+        best_model_hparams = max(opt_hparams, key=opt_hparams.count)
+    except:
+        # In case all optimal hparams are the same max() equals none.
+        best_model_hparams = opt_hparams
 
-            if pipeline:
-                param_name = ('__').join((model_name, str(key)))
-            else:
-                param_name = str(key)
-
-            models_and_parameters[model_name][1][param_name] = value
-
-    return models_and_parameters
+    end_results = _update_prelim_results(
+        results, path_tempdir, random_state, estimator, selector,
+        best_model_hparams, np.mean(test_scores), np.mean(train_scores),
+        np.squeeze(np.where(features >= THRESH))
+    )
+    return end_results
 
 
-if __name__ == '__main__':
-    # Demo run:
+def grid_search_oob(*args, verbose=1, score_func=None, n_jobs=1):
 
-    pass
+    (
+        estimator, hparam_grid, selector, X, y, n_splits, random_state
+    ) = args
+
+    global THRESH
+
+    oob_sampler = utils.BootstrapOutOfBag(
+        n_splits=n_splits, random_state=random_state
+    )
+    # Inner loop for model selection.
+    best_test_score = -np.inf
+    best_model, best_support = [], []
+    for combo_num, hparams in enumerate(hparam_grid):
+
+        # Setup:
+        features = np.zeros(X.shape[1], dtype=int)
+
+        train_scores, test_scores = [], []
+        for num, (train_idx, test_idx) in enumerate(oob_sampler.split(X, y)):
+
+            X_train, X_test = X[train_idx], X[test_idx]
+            y_train, y_test = y[train_idx], y[test_idx]
+
+            # NOTE: Standardizing in feature sel function.
+            X_train_sub, X_test_sub, support = selector['func'](
+                (X_train, X_test, y_train, y_test), **selector['params']
+            )
+            model = _check_estimator(
+                np.size(support), hparams, estimator, random_state=random_state
+            )
+            train_score, test_score = utils.scale_fit_predict632(
+                model, X_train_sub, X_test_sub, y_train, y_test,
+                score_func=score_func
+            )
+            # Bookkeeping of features selected in each fold.
+            features[support] += 1
+            train_scores.append(train_score), test_scores.append(test_score)
+
+        if np.mean(test_scores) > best_test_score:
+            best_test_score = np.mean(test_scores)
+            best_model = _check_estimator(
+                np.size(support), hparams, estimator, random_state=random_state
+            )
+            best_support = np.squeeze(np.where(features >= THRESH))
+
+        return best_model, best_support
