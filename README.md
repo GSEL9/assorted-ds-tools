@@ -3,6 +3,6 @@
 A collection of algorithms for predictive modeling and
 data visualization.
 
-## Fuzzy c-means:
+## Fuzzy C-Means:
 
-## Tikhonov regularized regression:
+## Tikhonov Regularized Regression:
